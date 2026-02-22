@@ -19,15 +19,15 @@
 
         .sidebar { width: 260px; border-right: 1px solid #eee; background: #f8f9fa; display: flex; flex-direction: column; }
         .sidebar-header { padding: 20px; font-weight: bold; font-size: 1.2rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        
+
         .add-channel-btn { font-size: 1.2rem; cursor: pointer; color: #0084ff; border: none; background: none; font-weight: bold; }
         .logout-btn { font-size: 0.7rem; cursor: pointer; color: #ff6b6b; border: 1px solid #ff6b6b; padding: 3px 8px; border-radius: 5px; }
-        
+
         .friend-list { flex: 1; overflow-y: auto; }
         .friend-item { padding: 15px 20px; display: flex; align-items: center; cursor: pointer; transition: 0.2s; border-bottom: 1px solid #f1f1f1; }
         .friend-item:hover { background: #f1f1f1; }
         .friend-item.active { background: #e7f1ff; color: #0084ff; font-weight: bold; }
-        
+
         .profile-img { width: 35px; height: 35px; border-radius: 50%; background: #3498db; margin-right: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.8rem; }
 
         .chat-area { flex: 1; display: flex; flex-direction: column; }
@@ -38,7 +38,7 @@
         .msg-container { display: flex; flex-direction: column; max-width: 70%; }
         .msg-container.sent { align-self: flex-end; align-items: flex-end; }
         .msg-container.received { align-self: flex-start; align-items: flex-start; }
-        
+
         .nickname { font-size: 0.75rem; color: #888; margin-bottom: 4px; }
         .msg { padding: 10px 14px; border-radius: 18px; font-size: 0.9rem; word-break: break-all; }
         .msg.received { background: #f1f0f0; border-top-left-radius: 2px; }
@@ -128,7 +128,7 @@
             document.getElementById('authSection').style.display = 'none';
             document.getElementById('messengerMain').style.display = 'flex';
             currentUserEmail = user.email;
-            
+
             loadChannels(); // 채널 목록 가져오기
             switchChannel('public', '전체 대화방'); // 기본 채널 입장
         } else {
@@ -154,7 +154,7 @@
             list.innerHTML = "";
             // 기본 전체 채널 추가
             addChannelItem('public', '전체 대화방');
-            
+
             snapshot.forEach((child) => {
                 addChannelItem(child.key, child.val().name);
             });
@@ -174,11 +174,11 @@
         currentChannel = id;
         document.getElementById('currentChannelName').innerText = name;
         document.getElementById('msgWindow').innerHTML = ""; // 화면 초기화
-        
+
         // 채널 목록 활성화 스타일 업데이트
         const items = document.querySelectorAll('.friend-item');
         items.forEach(item => item.classList.remove('active'));
-        
+
         loadMessages();
     }
 
@@ -202,7 +202,7 @@
         database.ref(`messages/${currentChannel}`).on('child_added', (snapshot) => {
             const data = snapshot.val();
             const window = document.getElementById('msgWindow');
-            
+
             const isMe = data.email === currentUserEmail;
             const container = document.createElement('div');
             container.className = `msg-container ${isMe ? 'sent' : 'received'}`;
@@ -211,7 +211,7 @@
             const nick = document.createElement('span');
             nick.className = 'nickname';
             nick.innerText = isMe ? "나" : data.nickname;
-            
+
             const msgDiv = document.createElement('div');
             msgDiv.className = `msg ${isMe ? 'sent' : 'received'}`;
             msgDiv.innerText = data.message;
@@ -219,7 +219,7 @@
             container.appendChild(nick);
             container.appendChild(msgDiv);
             window.appendChild(container);
-            
+
             window.scrollTop = window.scrollHeight;
         });
     }
