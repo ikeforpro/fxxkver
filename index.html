@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with Friends (Login System)</title>
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background-color: #e5e5e5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+
+        /* 로그인 화면 스타일 */
+        #authSection { width: 350px; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
+        .auth-input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .auth-btn { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-bottom: 5px; }
+        .login-btn { background: #0084ff; color: white; }
+        .signup-btn { background: #f8f9fa; border: 1px solid #ddd; color: #333; }
+
+        /* 메인 채팅 레이아웃 (로그인 전엔 숨김) */
+        .messenger { width: 800px; height: 600px; background: white; border-radius: 15px; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
+
+        /* ... 기존 스타일 유지 ... */
+        .sidebar { width: 260px; border-right: 1px solid #eee; background: #f8f9fa; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px; font-weight: bold; font-size: 1.2rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .logout-btn { font-size: 0.7rem; cursor: pointer; color: #ff6b6b; border: 1px solid #ff6b6b; padding: 3px 8px; border-radius: 5px; }
+        .friend-list { flex: 1; overflow-y: auto; }
+        .friend-item { padding: 15px 20px; display: flex; align-items: center; cursor: pointer; transition: 0.2s; }
+        .friend-item.active { background: #e7f1ff; }
+        .profile-img { width: 40px; height: 40px; border-radius: 50%; background: #ccc; margin-right: 12px; }
+        .chat-area { flex: 1; display: flex; flex-direction: column; }
+        .chat-header { padding: 15px 25px; border-bottom: 1px solid #eee; font-weight: bold; display: flex; align-items: center; }
+        .status-dot { width: 8px; height: 8px; background: #2ecc71; border-radius: 50%; margin-left: 8px; }
+        .messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #fff; }
+        .msg { max-width: 70%; padding: 10px 14px; border-radius: 18px; font-size: 0.9rem; }
+        .msg.received { align-self: flex-start; background: #f1f0f0; }
+        .msg.sent { align-self: flex-end; background: #0084ff; color: white; }
+        .input-box { padding: 20px; border-top: 1px solid #eee; display: flex; gap: 10px; }
+        .input-box input { flex: 1; border: none; background: #f1f0f0; padding: 12px 18px; border-radius: 25px; outline: none; }
+        .input-box button { background: #0084ff; color: white; border: none; padding: 0 20px; border-radius: 20px; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="authSection">
+    <h2>반가워요!</h2>
+    <p style="color: #666; font-size: 0.9rem;">채팅을 시작하려면 로그인하세요.</p>
+    <input type="email" id="email" class="auth-input" placeholder="이메일">
+    <input type="password" id="password" class="auth-input" placeholder="비밀번호">
+    <button onclick="signIn()" class="auth-btn login-btn">로그인</button>
+    <button onclick="signUp()" class="auth-btn signup-btn">이메일로 회원가입</button>
+</div>
+
+<div class="messenger" id="messengerMain">
+    <div class="sidebar">
+        <div class="sidebar-header">
+            채팅 <span class="logout-btn" onclick="signOut()">로그아웃</span>
+        </div>
+        <div class="friend-list">
+            <div class="friend-item active">
+                <div class="profile-img" style="background: #ffbd45;"></div>
+                <div><strong>전체 대화방</strong><br><small id="userEmail" style="color: #888;"></small></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-area">
+        <div class="chat-header">실시간 톡 <span class="status-dot"></span></div>
+        <div class="messages" id="msgWindow"></div>
+        <div class="input-box">
+            <input type="text" id="chatInput" placeholder="메시지를 입력하세요..." onkeypress="if(event.keyCode==13) send()">
+            <button onclick="send()">전송</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyAw7tCJOm0djyiuYv4JNmhHwP_E8BmOlVQ",
+        authDomain: "my-chat-app-9ee00.firebaseapp.com",
+        databaseURL: "https://my-chat-app-9ee00-default-rtdb.firebaseio.com",
+        projectId: "my-chat-app-9ee00",
+        storageBucket: "my-chat-app-9ee00.firebasestorage.app",
+        messagingSenderId: "384196897745",
+        appId: "1:384196897745:web:47328e3cbe005662690ef0"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    const auth = firebase.auth();
+
+    let currentUserEmail = "";
+
+    // --- 1. 로그인/회원가입 기능 ---
+    function signUp() {
+        const email = document.getElementById('email').value;
+        const pw = document.getElementById('password').value;
+        auth.createUserWithEmailAndPassword(email, pw)
+            .then(() => alert("회원가입 성공!"))
+            .catch(err => alert("가입 실패: " + err.message));
+    }
+
+    function signIn() {
+        const email = document.getElementById('email').value;
+        const pw = document.getElementById('password').value;
+        auth.signInWithEmailAndPassword(email, pw)
+            .catch(err => alert("로그인 실패: " + err.message));
+    }
+
+    function signOut() {
+        auth.signOut();
+    }
+
+    // --- 2. 로그인 상태 감시 ---
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('messengerMain').style.display = 'flex';
+            document.getElementById('userEmail').innerText = user.email;
+            currentUserEmail = user.email;
+            loadMessages(); // 로그인 성공 시 메시지 로드 시작
+        } else {
+            document.getElementById('authSection').style.display = 'block';
+            document.getElementById('messengerMain').style.display = 'none';
+        }
+    });
+
+    // --- 3. 채팅 기능 ---
+    function send() {
+        const input = document.getElementById('chatInput');
+        const text = input.value.trim();
+        if (text !== "") {
+            database.ref('messages').push({
+                email: currentUserEmail,
+                message: text,
+                timestamp: Date.now()
+            });
+            input.value = '';
+        }
+    }
+
+    function loadMessages() {
+        // 중복 방지를 위해 초기화 후 딱 한 번만 리스너 연결
+        database.ref('messages').off();
+        database.ref('messages').on('child_added', (snapshot) => {
+            const data = snapshot.val();
+            const window = document.getElementById('msgWindow');
+            const div = document.createElement('div');
+
+            // 내가 보낸 건지 이메일로 비교
+            div.className = (data.email === currentUserEmail) ? 'msg sent' : 'msg received';
+            div.innerText = data.message;
+
+            window.appendChild(div);
+            window.scrollTop = window.scrollHeight;
+        });
+    }
+</script>
+
+</body>
+</html>
